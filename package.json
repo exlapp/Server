@@ -1,0 +1,32 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "backend server",
+  "main": "index.ts",  
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/exlapp/Server.git"
+  },
+  "keywords": [
+    "server",
+    "backend"
+  ],
+  "author": "Burenin Alexandr",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/exlapp/Server/issues"
+  },
+  "homepage": "https://github.com/exlapp/Server#readme",
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.8",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
