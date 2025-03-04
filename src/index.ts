@@ -1,13 +1,3 @@
-import express, { Request, Response } from 'express';
+import { server } from './common/server';
 
-const app = express();
-
-app.get('/', (req: Request, res: Response) => {
-    res.send('Hello Express!');
-});
-
-app.listen(5000, 'localhost').on(
-    'listening', () => {
-        console.log('Server on')
-    }
-)
+server();
