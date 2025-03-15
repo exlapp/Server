@@ -1,8 +1,9 @@
-import { Router, Request, Response } from 'express';
+import { request, Router } from 'express';
 import { getAuth } from '../controllers/authController';
+import { executeAuthChain } from '../validators/executeAuthChain'
 
 const router: Router = Router();
 
-router.get('/', getAuth);
+router.post('/', executeAuthChain(), getAuth);
 
 export { router as authRouter };
