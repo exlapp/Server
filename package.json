@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/exlapp/Server#readme",
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/dotenv": "^8.2.3",
     "@types/express": "^5.0.0",
     "@types/mongoose": "^5.11.97",
@@ -30,6 +31,7 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-validator": "^7.2.1",
