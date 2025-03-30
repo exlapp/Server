@@ -1,59 +1,71 @@
 import { Request, Response, NextFunction } from "express";
-import { queryUser } from "../queries/queryUser";
-import { Result, ValidationError, validationResult } from "express-validator";
-import { MongooseError } from "mongoose";
-import { view } from '../views/viewAuth';
-import { genSalt, hash, compare } from "bcrypt";
+import { validationResult } from "express-validator";
+import { SignInWithLoggingUseCase } from '../domain/UseCases/SignInWithLoggingUseCase'
+import { AuthError } from '../errors/AuthError'
+import { BadReqError } from '../errors/BadReqError'
+import { compare } from "bcrypt";
+import { jwtGenerator } from "../common/jwtGenerator";
+import { ServerError } from "../errors/ServerError";
+import { COOKIE_MAX_AGE } from "../configs/cookieConfig";
 
-interface IAuth {
-    username: string
-    password: string
-}
-
-interface IUser {
+interface IAuthRequest extends Request {
     login: string
     password: string
 }
 
 const getAuth = async (request: Request, response: Response, next: NextFunction): Promise<void> => {    
-        
+    
     try {
 
-        const result: Result<ValidationError> = validationResult(request);        
-    
-        if (!result.isEmpty()) {
-            view({statusCode: 400, data: {message: 'Bad Request'}, response: response});
-            return            
+        const result: boolean = validationResult(request).isEmpty();   
+        if (!result) {
+            throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')                        
         };
 
-        const {username, password}: IAuth = request.body;
-        const resultQuery = await queryUser(username);        
-    
-        if (!resultQuery) {
-            view({statusCode: 404, data: {message: 'User is not found'}, response: response});
-            return            
-        };
-
-        // const salt: string = await genSalt(10);
-        // const hashPassword: string = await hash(password, salt);        
-        const compareResult: boolean = await compare(password, resultQuery.password);
-                
-        if (!compareResult) {
-            view({statusCode: 403, data: {message: 'Wrong password!'}, response: response});                
-            return;
+        const {login, password} = <IAuthRequest>request.body;
+        
+        const existedUser = await new SignInWithLoggingUseCase().execute(login);
+        if (!existedUser) {
+            throw new AuthError('Неверные имя пользователя или пароль!')            
         }
 
-        view({statusCode: 200, data: {message: 'Access granted!'}, response: response});
-              
+        const { password: dbPassword } = existedUser;
+        if (!dbPassword) {
+            throw new AuthError('Неверные имя пользователя или пароль!')
+        }
 
+        const passwordsIsEqual: boolean = await compare(password, dbPassword);
+        if (!passwordsIsEqual) {
+            throw new AuthError('Неверные имя пользователя или пароль!')
+        }
+
+        const { id: dbId } = existedUser;
+        if (!dbId) {
+           throw new ServerError('Ошибка сервера. Не удалось получить id пользователя!')
+        }
+        
+        const {tokenAccess, tokenRefresh} = jwtGenerator(dbId);
+
+        response.header('Authorization', 'Bearer ' + tokenAccess);        
+        response.cookie('refreshToken', tokenRefresh , { maxAge: COOKIE_MAX_AGE, httpOnly: true, signed: true });
+                
+        response
+            .status(200)
+            .json({ 
+                data: { 
+                    message: 'Пользователь успешно авторизован!', 
+                    body: { 
+                        id: existedUser.id,
+                        status: existedUser.status,
+
+                     }
+                } 
+            });                    
+            
     } catch (error) {
-
-        if (error instanceof MongooseError) {
-            response.json({ error: error });
-        };
-
-    };
-    
+        next(error);
+    }
+            
 };
 
 export { getAuth };

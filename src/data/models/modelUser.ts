@@ -3,6 +3,7 @@ import { Schema, model } from 'mongoose';
 interface IdataSchema extends Document {
     login: string;
     password: string;
+    status: boolean;
 }
 
 const dataSchema = new Schema<IdataSchema>({
@@ -16,6 +17,11 @@ const dataSchema = new Schema<IdataSchema>({
         type: String,
         required: true,
     },
+
+    status: {
+        type: Boolean,
+        default: false
+    }
     
 });
 
