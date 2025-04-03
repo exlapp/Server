@@ -7,4 +7,4 @@ const chain = (): ValidationChain => {
     )           
 } 
 
-export {chain as executeAuthChain};
+export {chain as executeRegChain};

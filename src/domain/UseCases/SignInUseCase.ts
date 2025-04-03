@@ -46,4 +46,4 @@ class UseCase {
 
 }
 
-export { UseCase as SignInWithLoggingUseCase }
+export { UseCase as SignInUseCase }

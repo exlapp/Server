@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { validationResult } from "express-validator";
-import { SignInWithLoggingUseCase } from '../domain/UseCases/SignInWithLoggingUseCase'
+import { SignInUseCase } from '../domain/UseCases/SignInUseCase'
+import { SingnUpUseCase } from '../domain/UseCases/SignUpUseCase'
 import { AuthError } from '../errors/AuthError'
 import { BadReqError } from '../errors/BadReqError'
 import { compare } from "bcrypt";
@@ -24,7 +25,7 @@ const getAuth = async (request: Request, response: Response, next: NextFunction)
 
         const {login, password} = <IAuthRequest>request.body;
         
-        const existedUser = await new SignInWithLoggingUseCase().execute(login);
+        const existedUser = await new SignInUseCase().execute(login);
         if (!existedUser) {
             throw new AuthError('Неверные имя пользователя или пароль!')            
         }
@@ -57,7 +58,6 @@ const getAuth = async (request: Request, response: Response, next: NextFunction)
                     body: { 
                         id: existedUser.id,
                         status: existedUser.status,
-
                      }
                 } 
             });                    
@@ -68,4 +68,36 @@ const getAuth = async (request: Request, response: Response, next: NextFunction)
             
 };
 
-export { getAuth };
+const createUser = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+
+    try {
+
+        const result: boolean = validationResult(request).isEmpty();   
+        if (!result) {
+            throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')                        
+        };
+
+        const {login, password} = <IAuthRequest>request.body;
+        
+        const newUser = await new SingnUpUseCase().execute(login, password);
+        if (!newUser) {
+            throw new AuthError('Ошибка регистрации. Пользователь с таким именем уже существует!')            
+        }
+
+        const { login: entLogin } = newUser;
+
+        response
+            .status(200)
+            .json({ 
+                data: { 
+                    message: `Пользователь ${entLogin} успешно зарегистрирован!`,                    
+                } 
+            });        
+                
+    } catch (error) {
+        next(error);
+    }
+
+}
+
+export { getAuth, createUser };
