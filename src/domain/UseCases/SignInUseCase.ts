@@ -1,8 +1,5 @@
 import { User } from "../Entities/User";
 import { AuthRepository } from '../../Adapters/AuthRepository'
-import { Mongoose, MongooseError } from "mongoose";
-import { console } from "inspector";
-import EventEmitter from "events";
 
 interface IUser {    
     id: string | undefined;

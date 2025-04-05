@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { validationResult } from "express-validator";
 import { SignInUseCase } from '../domain/UseCases/SignInUseCase'
-import { SingnUpUseCase } from '../domain/UseCases/SignUpUseCase'
+import { SignUpUseCase } from '../domain/UseCases/SignUpUseCase'
+import { SetNewPasswordUseCase } from '../domain/UseCases/SetNewPasswordUseCase'
 import { AuthError } from '../errors/AuthError'
 import { BadReqError } from '../errors/BadReqError'
 import { compare } from "bcrypt";
@@ -9,9 +10,10 @@ import { jwtGenerator } from "../common/jwtGenerator";
 import { ServerError } from "../errors/ServerError";
 import { COOKIE_MAX_AGE } from "../configs/cookieConfig";
 
-interface IAuthRequest extends Request {
-    login: string
-    password: string
+interface IAuthRequest extends Request {    
+    id?: string;
+    login?: string;
+    password?: string;
 }
 
 const getAuth = async (request: Request, response: Response, next: NextFunction): Promise<void> => {    
@@ -24,6 +26,9 @@ const getAuth = async (request: Request, response: Response, next: NextFunction)
         };
 
         const {login, password} = <IAuthRequest>request.body;
+        if (!login || !password) {
+            throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')
+        }
         
         const existedUser = await new SignInUseCase().execute(login);
         if (!existedUser) {
@@ -78,8 +83,11 @@ const createUser = async (request: Request, response: Response, next: NextFuncti
         };
 
         const {login, password} = <IAuthRequest>request.body;
+        if (!login || !password) {
+            throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')
+        }
         
-        const newUser = await new SingnUpUseCase().execute(login, password);
+        const newUser = await new SignUpUseCase().execute(login, password);
         if (!newUser) {
             throw new AuthError('Ошибка регистрации. Пользователь с таким именем уже существует!')            
         }
@@ -100,4 +108,41 @@ const createUser = async (request: Request, response: Response, next: NextFuncti
 
 }
 
-export { getAuth, createUser };
+const newPasswordSet = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+
+    try {
+
+        const result: boolean = validationResult(request).isEmpty();   
+        if (!result) {
+            throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')                        
+        };
+
+        const { id, password } = <IAuthRequest>request.body;
+        if (!id || !password) {
+            throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')
+        }
+
+        const userWithUpdatedPassword = await new SetNewPasswordUseCase().execute(id, password);
+        if (!userWithUpdatedPassword) {
+            throw new AuthError('Ошибка регистрации. Не удалось обновить пароль!')
+        }
+
+        const { login: entLogin  } = userWithUpdatedPassword;
+
+        response
+            .status(200)
+            .json({ 
+                data: { 
+                    message: `Пароль пользователя ${entLogin} успешно обновлен!`,                    
+                } 
+            });
+
+
+        
+    } catch (error) {
+        next(error);
+    }
+
+}
+
+export { getAuth, createUser, newPasswordSet };

@@ -11,23 +11,23 @@ interface IUser {
 
 class UseCase {
     
-    execute = async (login: string, password: string): Promise<IUser | null> => {
+    execute = async (userId: string, password: string): Promise<IUser | null> => {
         
         try {
 
             const hashedPassword = await hash(password, 10);
-            const user = new User({login: login, password: hashedPassword});
-            const authRepository = new AuthRepository();
+            const user = new User({ id: userId, password: hashedPassword });
+            const { setNewPassword } = new AuthRepository();
 
             const userEntity = user.getEntity();
             if (!userEntity) {
-                throw new Error("User must have login and password");                
+                throw new Error("User must have id and password");                
             }
         
-            const { login: entLogin, password: entPassword } = userEntity;
+            const { id: entId, password: entPassword } = userEntity;
 
-            if (!entLogin || !entPassword) {
-                throw new Error("User must have login and password");
+            if (!entId || !entPassword) {
+                throw new Error("User must have id and password");
             }
         
             // const userLogin = user.getEntity().login;        
@@ -35,14 +35,14 @@ class UseCase {
             //     throw new Error("User must have login");                
             // }        
         
-            const queryResult = await authRepository.signUp(entLogin, entPassword);            
+            const queryResult = await setNewPassword(entId, entPassword);            
             if (!queryResult) {
-                return null
+                throw new Error('Пользователь не найден!');
             }
            
-            const { id, status } = queryResult;
+            const { login, status } = queryResult;
             
-            user.setId(id);
+            user.setLogin(login);
             user.setStatus(status);        
                         
             return user.getEntity()
@@ -55,4 +55,4 @@ class UseCase {
 
 }
 
-export { UseCase as SignUpUseCase }
+export { UseCase as SetNewPasswordUseCase }

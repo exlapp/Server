@@ -3,6 +3,7 @@ import { queryUpdateUser } from "../data/queries/queryUpdateUser";
 import { queryCreateUser } from '../data/queries/queryCreateUser'
 import { AuthPort } from "../domain/Ports/AuthPort";
 import { log } from "console";
+import { queryNewPasswordSet } from "../data/queries/queryNewPasswordSet";
 
 interface IProps {
     id: string;
@@ -56,11 +57,27 @@ class Adapter extends AuthPort {
             throw error;
         }
 
-    }
+    };
 
-    // signOut = async () => {
-    //     return "logout"
-    // }
+    setNewPassword = async (id: string, newPassword: string): Promise<IProps | null> => {
+
+        try {
+
+            const userWithNewPassword = await queryNewPasswordSet(id, newPassword);
+            if (!userWithNewPassword) return null;
+
+            return {
+                id: userWithNewPassword.id,
+                login: userWithNewPassword.login,
+                password: userWithNewPassword.password,
+                status: userWithNewPassword.status            
+            }
+
+        } catch (error) {
+            throw error;
+        }
+
+    };
 }
 
 export { Adapter as AuthRepository }
