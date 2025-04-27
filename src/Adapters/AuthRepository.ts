@@ -14,7 +14,7 @@ interface IProps {
 
 class Adapter extends AuthPort {
 
-    signIn = async (login: string): Promise<IProps | null> => {
+    signIn = async ( login: string ): Promise<IProps | null> => {
         
         try {
 
@@ -34,12 +34,11 @@ class Adapter extends AuthPort {
 
         } catch (error) {
             throw error;
-        }
-                     
+        }                     
         
     };
 
-    signUp = async (login: string, password: string): Promise<IProps | null> => {
+    signUp = async ( login: string, password: string ): Promise<IProps | null> => {
         
         try {
             
@@ -59,7 +58,7 @@ class Adapter extends AuthPort {
 
     };
 
-    setNewPassword = async (id: string, newPassword: string): Promise<IProps | null> => {
+    setNewPassword = async ( id: string, newPassword: string ): Promise<IProps | null> => {
 
         try {
 
@@ -78,6 +77,27 @@ class Adapter extends AuthPort {
         }
 
     };
+
+    findUser = async ( login: string ): Promise<IProps | null> => {
+
+        try {
+
+            const existUser = await queryFindUser(login);
+            if (!existUser) return null;
+
+            return {
+                id: existUser.id,
+                login: existUser.login,
+                password: existUser.password,
+                status: existUser.status            
+            }
+
+        } catch (error) {
+            throw error;
+        }
+
+    }
+    
 }
 
 export { Adapter as AuthRepository }
