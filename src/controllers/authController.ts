@@ -11,8 +11,12 @@ import { jwtGenerator } from "../common/jwtGenerator";
 import { ServerError } from "../errors/ServerError";
 import { COOKIE_MAX_AGE } from "../configs/cookieConfig";
 import { emailSendler } from '../common/emailSendler'
-import { sign } from "jsonwebtoken";
+import { sign, verify } from "jsonwebtoken";
 import { jwtRestoreSecretKey, jwtRestoreExpiresIn } from "../configs/jwtConfig";
+
+interface IRequestParams {
+    restoreToken?: string;
+}
 
 interface IAuthRequestBody {    
     id?: string;
@@ -24,6 +28,7 @@ declare global {
     namespace Express {
         export interface Request<TParams = {}, TQuery = {}, TBody = any> {
             body: TBody & IAuthRequestBody;
+            params: TParams & IRequestParams;
         }
     }
 }
@@ -132,6 +137,16 @@ const newPasswordSet = async (request: Request, response: Response, next: NextFu
         const { id, password } = <IAuthRequestBody>request.body;
         if (!id || !password) {
             throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')
+        }
+
+        const { restoreToken } = <IRequestParams>request.params
+        if (!restoreToken) {
+            throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')
+        }
+
+        const isTokenValid = verify(restoreToken, jwtRestoreSecretKey);
+        if (!isTokenValid) {
+            throw new BadReqError('Ошибка запроса. Ссылка для восстановления пароля устарела/не действительна!')
         }
 
         const userWithUpdatedPassword = await new SetNewPasswordUseCase().execute(id, password);
