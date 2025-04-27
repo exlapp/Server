@@ -3,17 +3,29 @@ import { validationResult } from "express-validator";
 import { SignInUseCase } from '../domain/UseCases/SignInUseCase'
 import { SignUpUseCase } from '../domain/UseCases/SignUpUseCase'
 import { SetNewPasswordUseCase } from '../domain/UseCases/SetNewPasswordUseCase'
+import { SendPasswordResetLink } from '../domain/UseCases/SendPasswordResetLink'
 import { AuthError } from '../errors/AuthError'
 import { BadReqError } from '../errors/BadReqError'
 import { compare } from "bcrypt";
 import { jwtGenerator } from "../common/jwtGenerator";
 import { ServerError } from "../errors/ServerError";
 import { COOKIE_MAX_AGE } from "../configs/cookieConfig";
+import { emailSendler } from '../common/emailSendler'
+import { sign } from "jsonwebtoken";
+import { jwtRestoreSecretKey, jwtRestoreExpiresIn } from "../configs/jwtConfig";
 
-interface IAuthRequest extends Request {    
+interface IAuthRequestBody {    
     id?: string;
     login?: string;
     password?: string;
+}
+
+declare global {
+    namespace Express {
+        export interface Request<TParams = {}, TQuery = {}, TBody = any> {
+            body: TBody & IAuthRequestBody;
+        }
+    }
 }
 
 const getAuth = async (request: Request, response: Response, next: NextFunction): Promise<void> => {    
@@ -25,7 +37,7 @@ const getAuth = async (request: Request, response: Response, next: NextFunction)
             throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')                        
         };
 
-        const {login, password} = <IAuthRequest>request.body;
+        const {login, password} = <IAuthRequestBody>request.body;
         if (!login || !password) {
             throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')
         }
@@ -82,7 +94,7 @@ const createUser = async (request: Request, response: Response, next: NextFuncti
             throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')                        
         };
 
-        const {login, password} = <IAuthRequest>request.body;
+        const {login, password} = <IAuthRequestBody>request.body;
         if (!login || !password) {
             throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')
         }
@@ -117,7 +129,7 @@ const newPasswordSet = async (request: Request, response: Response, next: NextFu
             throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')                        
         };
 
-        const { id, password } = <IAuthRequest>request.body;
+        const { id, password } = <IAuthRequestBody>request.body;
         if (!id || !password) {
             throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')
         }
@@ -145,4 +157,39 @@ const newPasswordSet = async (request: Request, response: Response, next: NextFu
 
 }
 
-export { getAuth, createUser, newPasswordSet };
+const forgotPassword = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+
+    try {
+
+        const result: boolean = validationResult(request).isEmpty();   
+        if (!result) {
+            throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')                        
+        };
+        
+        const { login: reqLogin } = <IAuthRequestBody> request.body;
+        if (!reqLogin) {
+            throw new BadReqError('Ошибка запроса. Получены некорректные параметры запроса!')
+        }
+
+        const entity = await new SendPasswordResetLink().execute(reqLogin);
+        if (!entity) {
+            throw new AuthError('Ошибка регистрации. Не удалось найти email!')
+        }
+
+        const { login: entLogin } = entity;
+
+        const tokenRestore = sign({ login: entLogin }, jwtRestoreSecretKey, {expiresIn: jwtRestoreExpiresIn})
+                
+        const isSendEmail = await emailSendler(tokenRestore)
+        if (!isSendEmail) {
+            throw new AuthError('Ошибка регистрации. Не удалось отправить письмо!')
+        }
+
+        response.status(200).json({ message: `Письмо по адресу ${entLogin} отправлено!` });
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+export { getAuth, createUser, newPasswordSet, forgotPassword };
